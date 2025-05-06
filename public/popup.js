@@ -1,0 +1,175 @@
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const summarizeBtn = document.getElementById('summarize-btn');
+  const loadingElement = document.getElementById('loading');
+  const summaryElement = document.getElementById('summary');
+  const summaryPointsElement = document.getElementById('summary-points');
+  const pageTitleElement = document.getElementById('page-title');
+  const noContentElement = document.getElementById('no-content');
+  const notLoggedElement = document.getElementById('not-logged');
+  const loginBtn = document.getElementById('login-btn');
+  const optionsBtn = document.querySelector('.options-btn');
+  const limitInfoElement = document.getElementById('limit-info');
+  
+  // Check login status
+  const userDetails = await checkLoginStatus();
+  
+  if (!userDetails) {
+    loadingElement.classList.add('hidden');
+    notLoggedElement.classList.remove('hidden');
+    summarizeBtn.disabled = true;
+  } else {
+    // Update limit info
+    updateLimitInfo();
+  }
+  
+  // Button event listeners
+  summarizeBtn.addEventListener('click', handleSummarize);
+  loginBtn.addEventListener('click', openLogin);
+  optionsBtn.addEventListener('click', openOptions);
+  
+  // Initial summary attempt if we're logged in
+  if (userDetails) {
+    handleSummarize();
+  }
+});
+
+async function checkLoginStatus() {
+  // This would normally check with your backend
+  // For demo purposes, we'll check local storage
+  const userString = localStorage.getItem('pagebrief_user');
+  if (!userString) return null;
+  
+  try {
+    return JSON.parse(userString);
+  } catch (e) {
+    return null;
+  }
+}
+
+async function updateLimitInfo() {
+  // Get usage from storage
+  chrome.storage.local.get(['dailyUsage', 'usageLimit'], (result) => {
+    const dailyUsage = result.dailyUsage || 0;
+    const usageLimit = result.usageLimit || 3; // Free tier limit
+    
+    document.getElementById('limit-info').textContent = `Resumos hoje: ${dailyUsage}/${usageLimit}`;
+    
+    // Disable summarize button if limit reached
+    if (dailyUsage >= usageLimit) {
+      document.getElementById('summarize-btn').disabled = true;
+    }
+  });
+}
+
+async function handleSummarize() {
+  // Show loading state
+  const loadingElement = document.getElementById('loading');
+  const summaryElement = document.getElementById('summary');
+  const noContentElement = document.getElementById('no-content');
+  
+  loadingElement.classList.remove('hidden');
+  summaryElement.classList.add('hidden');
+  noContentElement.classList.add('hidden');
+  
+  // Get current tab
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  
+  if (!tab) {
+    showError("Não foi possível acessar a aba atual.");
+    return;
+  }
+  
+  // Send message to content script
+  chrome.tabs.sendMessage(tab.id, { action: "getSummary" }, (response) => {
+    if (chrome.runtime.lastError) {
+      // Content script not ready or cannot establish connection
+      showError("Não foi possível conectar com a página. Tente recarregá-la.");
+      return;
+    }
+    
+    if (!response || response.error) {
+      showError(response?.error || "Erro ao gerar resumo.");
+      return;
+    }
+    
+    if (!response.summary || response.summary.length === 0) {
+      loadingElement.classList.add('hidden');
+      noContentElement.classList.remove('hidden');
+      return;
+    }
+    
+    // Display the summary
+    displaySummary(tab.title, response.summary);
+    
+    // Update usage count
+    updateUsageCount();
+  });
+}
+
+function displaySummary(pageTitle, summaryPoints) {
+  const loadingElement = document.getElementById('loading');
+  const summaryElement = document.getElementById('summary');
+  const summaryPointsElement = document.getElementById('summary-points');
+  const pageTitleElement = document.getElementById('page-title');
+  
+  // Set page title
+  pageTitleElement.textContent = pageTitle;
+  
+  // Clear existing points
+  summaryPointsElement.innerHTML = '';
+  
+  // Add new points
+  summaryPoints.forEach(point => {
+    const li = document.createElement('li');
+    li.textContent = point;
+    summaryPointsElement.appendChild(li);
+  });
+  
+  // Show summary
+  loadingElement.classList.add('hidden');
+  summaryElement.classList.remove('hidden');
+}
+
+function showError(message) {
+  const loadingElement = document.getElementById('loading');
+  const noContentElement = document.getElementById('no-content');
+  
+  loadingElement.classList.add('hidden');
+  noContentElement.classList.remove('hidden');
+  noContentElement.querySelector('p').textContent = message;
+}
+
+function updateUsageCount() {
+  chrome.storage.local.get(['dailyUsage', 'lastUsageDate'], (result) => {
+    const today = new Date().toDateString();
+    const lastUsageDate = result.lastUsageDate || '';
+    
+    let dailyUsage = result.dailyUsage || 0;
+    
+    // Reset counter if it's a new day
+    if (lastUsageDate !== today) {
+      dailyUsage = 1;
+    } else {
+      dailyUsage += 1;
+    }
+    
+    // Update storage
+    chrome.storage.local.set({ 
+      dailyUsage: dailyUsage,
+      lastUsageDate: today
+    }, () => {
+      // Update the UI
+      updateLimitInfo();
+    });
+  });
+}
+
+function openLogin() {
+  // Open login page in a new tab
+  chrome.tabs.create({ url: 'https://pagebrief.web.app/login' });
+}
+
+function openOptions() {
+  chrome.runtime.openOptionsPage();
+}
