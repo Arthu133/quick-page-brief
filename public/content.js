@@ -1,34 +1,75 @@
-
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "getSummary") {
-    // Extract content from the current page
-    const content = extractPageContent();
-    const pageUrl = window.location.href;
-    const pageTitle = document.title;
+    console.log("PageBrief: Recebida solicitação para resumir página");
     
-    if (!content || content.trim().length < 100) {
-      sendResponse({ 
-        error: "Conteúdo insuficiente para gerar resumo." 
+    // Check if DOM is ready
+    if (document.readyState === "loading") {
+      console.log("PageBrief: DOM ainda carregando, aguardando conclusão");
+      // Wait for DOM to be ready
+      document.addEventListener("DOMContentLoaded", () => {
+        processContentExtraction(sendResponse);
       });
-      return true;
+    } else {
+      // DOM is already loaded
+      console.log("PageBrief: DOM já carregado, processando extração");
+      processContentExtraction(sendResponse);
     }
-    
-    // Send the content to our Supabase function to get a summary
-    sendToSummaryAPI(content, pageUrl, pageTitle)
-      .then(summary => {
-        sendResponse(summary);
-      })
-      .catch(error => {
-        console.error("Error getting summary:", error);
-        sendResponse({
-          error: "Erro ao gerar resumo. Tente novamente mais tarde."
-        });
-      });
     
     return true; // Keeps the message channel open for the async response
   }
 });
+
+// Function to handle content extraction and processing
+function processContentExtraction(sendResponse) {
+  // Extract content from the current page
+  const content = extractPageContent();
+  const pageUrl = window.location.href;
+  const pageTitle = document.title;
+  
+  console.log(`PageBrief: Conteúdo extraído (${content.length} caracteres)`);
+  
+  if (!content || content.trim().length < 100) {
+    console.log("PageBrief: Conteúdo insuficiente, tentando esperar mais");
+    
+    // Try again with a delay to allow for dynamic content to load
+    setTimeout(() => {
+      const delayedContent = extractPageContent();
+      
+      if (!delayedContent || delayedContent.trim().length < 100) {
+        console.log("PageBrief: Ainda sem conteúdo suficiente após espera");
+        sendResponse({ 
+          error: "Conteúdo insuficiente para gerar resumo." 
+        });
+        return;
+      }
+      
+      console.log(`PageBrief: Conteúdo extraído após delay (${delayedContent.length} caracteres)`);
+      sendToSummaryAPI(delayedContent, pageUrl, pageTitle)
+        .then(summary => sendResponse(summary))
+        .catch(error => {
+          console.error("Error getting summary:", error);
+          sendResponse({
+            error: "Erro ao gerar resumo. Tente novamente mais tarde."
+          });
+        });
+    }, 1500); // Wait 1.5 seconds for dynamic content to load
+    
+    return;
+  }
+  
+  // Send the content to our Supabase function to get a summary
+  sendToSummaryAPI(content, pageUrl, pageTitle)
+    .then(summary => {
+      sendResponse(summary);
+    })
+    .catch(error => {
+      console.error("Error getting summary:", error);
+      sendResponse({
+        error: "Erro ao gerar resumo. Tente novamente mais tarde."
+      });
+    });
+}
 
 async function sendToSummaryAPI(content, url, title) {
   try {
@@ -199,56 +240,17 @@ function extractPageContent() {
   return content;
 }
 
-// Add the floating button to the page
-function addFloatingButton() {
-  const floatingBtn = document.createElement('div');
-  floatingBtn.className = 'pagebrief-floating-btn';
-  floatingBtn.innerHTML = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-      <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
-      <line x1="9" y1="9" x2="10" y2="9" />
-      <line x1="9" y1="13" x2="15" y2="13" />
-      <line x1="9" y1="17" x2="15" y2="17" />
-    </svg>
-  `;
-  
-  // Styles
-  const style = document.createElement('style');
-  style.textContent = `
-    .pagebrief-floating-btn {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background-color: #3b82f6;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-      z-index: 9999;
-      transition: transform 0.2s;
-    }
-    
-    .pagebrief-floating-btn:hover {
-      transform: scale(1.05);
-      background-color: #60a5fa;
-    }
-  `;
-  
-  document.head.appendChild(style);
-  document.body.appendChild(floatingBtn);
-  
-  // Click handler
-  floatingBtn.addEventListener('click', () => {
-    chrome.runtime.sendMessage({ action: 'openPopup' });
-  });
-}
+// Initialize as soon as script loads
+console.log("PageBrief: Content script carregado");
 
-// Check if we should add the floating button
-// For demo purposes, not adding it now to avoid interface clutter
-// addFloatingButton();
+// Add event listener for DOMContentLoaded
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("PageBrief: DOMContentLoaded disparado");
+});
+
+// Add event listener for load
+window.addEventListener("load", () => {
+  console.log("PageBrief: Página totalmente carregada (incluindo recursos)");
+});
+
+// No need to call addFloatingButton() here as it's commented out

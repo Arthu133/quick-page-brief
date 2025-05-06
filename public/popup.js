@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', async () => {
   const summarizeBtn = document.getElementById('summarize-btn');
   const loadingElement = document.getElementById('loading');
@@ -30,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Initial summary attempt if we're logged in
   if (userDetails) {
+    console.log("PageBrief: Usuário logado, tentando resumir página automaticamente");
     handleSummarize();
   }
 });
@@ -105,62 +105,72 @@ async function handleSummarize() {
   summaryElement.classList.add('hidden');
   noContentElement.classList.add('hidden');
   
+  console.log("PageBrief: Iniciando processo de resumo");
+  
   // Get current tab
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   
   if (!tab) {
+    console.error("PageBrief: Não foi possível acessar a aba atual");
     showError("Não foi possível acessar a aba atual.");
     return;
   }
   
   try {
-    // Try to extract content with a short delay to allow for dynamic content loading
+    console.log("PageBrief: Enviando mensagem para content script");
+    
+    // Inject content script if not already loaded
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      function: injectDelayedExtractor
+      function: () => {
+        console.log("PageBrief: Script de injeção executado");
+      }
     }).then(() => {
-      // Now send message to content script after the delay function was injected
-      setTimeout(() => {
-        chrome.tabs.sendMessage(tab.id, { action: "getSummary" }, (response) => {
-          if (chrome.runtime.lastError) {
-            // Content script not ready or cannot establish connection
-            showError("Não foi possível conectar com a página. Tente recarregá-la.");
-            return;
-          }
-          
-          if (!response || response.error) {
-            showError(response?.error || "Erro ao gerar resumo.");
-            return;
-          }
-          
-          if (!response.summary || response.summary.length === 0) {
-            loadingElement.classList.add('hidden');
-            noContentElement.classList.remove('hidden');
-            return;
-          }
-          
-          // Display the summary
-          displaySummary(tab.title, response.summary);
-          
-          // Update usage count
-          updateUsageCount();
-          
-          // Show premium message if returned in response
-          if (response.message) {
-            const summaryContainer = document.querySelector('.summary-container');
-            const premiumMessage = document.createElement('div');
-            premiumMessage.className = 'mt-4 p-2 bg-blue-50 text-blue-700 text-sm rounded';
-            premiumMessage.textContent = response.message;
-            summaryContainer.appendChild(premiumMessage);
-          }
-        });
-      }, 300); // Short delay to ensure content script has time to process
+      // Send message to content script
+      chrome.tabs.sendMessage(tab.id, { action: "getSummary" }, (response) => {
+        if (chrome.runtime.lastError) {
+          console.error("PageBrief: Erro ao conectar com content script:", chrome.runtime.lastError);
+          // Content script not ready or cannot establish connection
+          showError("Não foi possível conectar com a página. Tente recarregá-la.");
+          return;
+        }
+        
+        if (!response || response.error) {
+          console.error("PageBrief: Erro na resposta:", response?.error);
+          showError(response?.error || "Erro ao gerar resumo.");
+          return;
+        }
+        
+        if (!response.summary || response.summary.length === 0) {
+          console.log("PageBrief: Resumo vazio retornado");
+          loadingElement.classList.add('hidden');
+          noContentElement.classList.remove('hidden');
+          return;
+        }
+        
+        console.log("PageBrief: Resumo recebido com sucesso");
+        
+        // Display the summary
+        displaySummary(tab.title, response.summary);
+        
+        // Update usage count
+        updateUsageCount();
+        
+        // Show premium message if returned in response
+        if (response.message) {
+          const summaryContainer = document.querySelector('.summary-container');
+          const premiumMessage = document.createElement('div');
+          premiumMessage.className = 'mt-4 p-2 bg-blue-50 text-blue-700 text-sm rounded';
+          premiumMessage.textContent = response.message;
+          summaryContainer.appendChild(premiumMessage);
+        }
+      });
     }).catch(err => {
-      console.error("Script injection error:", err);
+      console.error("PageBrief: Erro de injeção de script:", err);
       showError("Erro ao analisar a página.");
     });
   } catch (error) {
-    console.error("Error in handleSummarize:", error);
+    console.error("PageBrief: Erro em handleSummarize:", error);
     showError("Ocorreu um erro ao tentar resumir a página.");
   }
 }
