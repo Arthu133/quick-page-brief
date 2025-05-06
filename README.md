@@ -5,23 +5,59 @@
 
 **URL**: https://lovable.dev/projects/b47f9b37-53e4-4f58-bd1f-2418df6dec96
 
-## How can I edit this code?
+## Extensão PageBrief - Chrome
 
-There are several ways of editing your application.
+Esta é uma extensão para o Google Chrome que gera resumos inteligentes de páginas web.
+
+### Construindo a extensão
+
+```sh
+# Ensure you have all dependencies
+npm install
+
+# Build the project using Vite
+npm run build
+
+# The extension will be available in the dist folder
+```
+
+### Testando localmente
+
+Para testar a extensão localmente:
+1. Construa o projeto usando os comandos acima
+2. Abra o Chrome e navegue para `chrome://extensions/`
+3. Ative o "Modo do desenvolvedor" (interruptor no canto superior direito)
+4. Clique em "Carregar sem compactação"
+5. Selecione a pasta `dist` gerada pelo processo de build
+
+### Publicando na Chrome Web Store
+
+Para publicar a extensão na Chrome Web Store, siga as instruções em [ZIP.md](public/ZIP.md).
+
+### Uso da Extensão
+
+Após instalar a extensão:
+1. Navegue para qualquer página web
+2. Clique no ícone da extensão na barra de ferramentas
+3. Clique em "Resumir página" para gerar um resumo da página atual
+
+## Como editar este projeto?
+
+Existem várias maneiras de editar o código:
 
 **Use Lovable**
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/b47f9b37-53e4-4f58-bd1f-2418df6dec96) and start prompting.
+Simplesmente visite o [Lovable Project](https://lovable.dev/projects/b47f9b37-53e4-4f58-bd1f-2418df6dec96) e comece a fazer solicitações.
 
-Changes made via Lovable will be committed automatically to this repo.
+As alterações feitas via Lovable serão confirmadas automaticamente neste repositório.
 
-**Use your preferred IDE**
+**Use seu IDE preferido**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Se você quiser trabalhar localmente usando seu próprio IDE, você pode clonar este repositório e enviar alterações. As alterações enviadas também serão refletidas no Lovable.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+O único requisito é ter Node.js e npm instalados - [instale com nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-Follow these steps:
+Siga estes passos:
 
 ```sh
 # Step 1: Clone the repository using the project's Git URL.
@@ -31,7 +67,7 @@ git clone <YOUR_GIT_URL>
 cd <YOUR_PROJECT_NAME>
 
 # Step 3: Install the necessary dependencies.
-npm i
+npm install
 
 # Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
