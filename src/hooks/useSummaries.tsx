@@ -52,19 +52,23 @@ export function useSummaries() {
     try {
       setIsLoading(true);
       
-      // First check if user can create more summaries today
-      const canCreate = await checkCanCreateSummary();
-      
-      if (!canCreate) {
+      // Check if user is premium before allowing to save
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('is_premium')
+        .eq('id', user.id)
+        .single();
+        
+      if (!profileData?.is_premium) {
         toast({
-          title: "Limite diário atingido",
-          description: "Você atingiu seu limite de 3 resumos diários. Faça upgrade para o plano premium para resumos ilimitados.",
+          title: "Recurso Premium",
+          description: "Salvar resumos é exclusivo para usuários PRO. Faça upgrade para o plano PRO por apenas R$9,90/mês.",
           variant: "destructive",
         });
         return null;
       }
       
-      // If can create, proceed with saving
+      // If premium, proceed with saving
       const { data, error } = await supabase
         .from('summaries')
         .insert({

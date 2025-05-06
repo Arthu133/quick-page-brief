@@ -165,25 +165,25 @@ const Account = () => {
             <h2 className="text-lg font-semibold mb-2">Plano atual</h2>
             <div className="bg-muted/50 p-4 rounded-md">
               <div className="flex justify-between mb-2">
-                <span className="font-medium">{profile?.is_premium ? 'Plano Premium' : 'Plano Gratuito'}</span>
+                <span className="font-medium">{profile?.is_premium ? 'Plano PRO' : 'Plano Gratuito'}</span>
                 <span className="text-extension-blue">Ativo</span>
               </div>
               
               {!profile?.is_premium && (
                 <>
-                  <p className="text-sm text-muted-foreground mb-4">3 resumos por dia</p>
+                  <p className="text-sm text-muted-foreground mb-4">1 resumo por dia, sem armazenamento de histórico</p>
                   <div className="h-2.5 w-full bg-gray-200 rounded-full">
                     <div 
                       className="h-2.5 rounded-full bg-extension-blue" 
-                      style={{ width: `${Math.min(100, (dailySummaryCount / 3) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (dailySummaryCount / 1) * 100)}%` }}
                     ></div>
                   </div>
-                  <p className="text-sm mt-2">{dailySummaryCount} de 3 resumos utilizados hoje</p>
+                  <p className="text-sm mt-2">{dailySummaryCount} de 1 resumo utilizado hoje</p>
                 </>
               )}
               
               {profile?.is_premium && (
-                <p className="text-sm text-muted-foreground">Resumos ilimitados e recursos premium</p>
+                <p className="text-sm text-muted-foreground">Resumos ilimitados e histórico completo</p>
               )}
             </div>
           </div>
@@ -191,7 +191,7 @@ const Account = () => {
           {!profile?.is_premium && (
             <div className="pricing-card pricing-card-highlight border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex justify-between items-center mb-4">
-                <h4 className="text-lg font-medium">Plano Premium</h4>
+                <h4 className="text-lg font-medium">Plano PRO</h4>
                 <span className="bg-extension-soft-blue dark:bg-extension-blue/20 text-extension-blue px-2 py-0.5 rounded-full text-xs">Recomendado</span>
               </div>
               <p className="text-2xl font-bold mb-1">R$9,90<span className="text-base font-normal text-muted-foreground">/mês</span></p>
@@ -208,18 +208,18 @@ const Account = () => {
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
-                  Histórico completo
+                  Histórico completo de resumos
                 </li>
                 <li className="flex items-center gap-2 text-sm">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
-                  Exportação de resumos (PDF, TXT)
+                  Salvamento de resumos
                 </li>
               </ul>
               
               <Button className="w-full bg-extension-blue hover:bg-extension-light-blue">
-                Upgrade para Premium
+                Upgrade para PRO
               </Button>
             </div>
           )}

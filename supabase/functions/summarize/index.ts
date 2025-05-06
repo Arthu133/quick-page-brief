@@ -107,6 +107,24 @@ async function saveSummary(
   summary: string[]
 ): Promise<Record<string, any> | null> {
   try {
+    // Check if user is premium before saving
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', userId)
+      .single();
+      
+    if (profileError) {
+      console.error('Error checking premium status:', profileError);
+      return null;
+    }
+    
+    // Only premium users can save summaries
+    if (!profileData.is_premium) {
+      console.log('User is not premium, not saving summary');
+      return null;
+    }
+    
     const { data, error } = await supabase
       .from('summaries')
       .insert({
@@ -163,6 +181,8 @@ serve(async (req) => {
     
     // Verify authentication if provided
     let userId = null;
+    let isPremium = false;
+    
     if (auth?.access_token) {
       const { data, error } = await supabase.auth.getUser(auth.access_token);
       
@@ -171,17 +191,28 @@ serve(async (req) => {
       } else if (data?.user) {
         userId = data.user.id;
         
-        // Check if user has reached their limit
-        const canCreate = await checkUserLimit(supabase, userId);
+        // Get user premium status
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('is_premium')
+          .eq('id', userId)
+          .single();
+          
+        isPremium = !!profileData?.is_premium;
         
-        if (!canCreate) {
-          return new Response(
-            JSON.stringify({ 
-              error: 'Daily limit reached',
-              message: 'You have reached your daily limit of summaries. Upgrade to premium for unlimited summaries.'
-            }),
-            { headers: corsHeaders, status: 403 }
-          );
+        // Check if user has reached their limit (if not premium)
+        if (!isPremium) {
+          const canCreate = await checkUserLimit(supabase, userId);
+          
+          if (!canCreate) {
+            return new Response(
+              JSON.stringify({ 
+                error: 'Daily limit reached',
+                message: 'Você atingiu seu limite diário de 1 resumo. Faça upgrade para o plano PRO por apenas R$9,90/mês para resumos ilimitados.'
+              }),
+              { headers: corsHeaders, status: 403 }
+            );
+          }
         }
       }
     }
@@ -189,15 +220,29 @@ serve(async (req) => {
     // Generate summary
     const summary = generateSummary(content, url);
     
-    // Save summary if authenticated
+    // Save summary if authenticated and premium
+    let saved = false;
     if (userId) {
-      await saveSummary(supabase, userId, url, title || url, summary);
-      await updateSummaryCount(supabase, userId);
+      // Update summary count for non-premium users
+      if (!isPremium) {
+        await updateSummaryCount(supabase, userId);
+      }
+      
+      // Only save if premium
+      if (isPremium) {
+        const savedSummary = await saveSummary(supabase, userId, url, title || url, summary);
+        saved = !!savedSummary;
+      }
     }
     
     // Return the summary
     return new Response(
-      JSON.stringify({ summary, saved: !!userId }),
+      JSON.stringify({ 
+        summary, 
+        saved, 
+        isPremium,
+        message: isPremium ? null : 'Atualize para o plano PRO para salvar resumos e desbloquear resumos ilimitados.'
+      }),
       { headers: corsHeaders, status: 200 }
     );
     

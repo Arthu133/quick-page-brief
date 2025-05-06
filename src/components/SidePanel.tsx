@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useSummaries } from '@/hooks/useSummaries';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SidePanelProps {
   isOpen: boolean;
@@ -29,7 +30,35 @@ const SidePanel: React.FC<SidePanelProps> = ({
   const { user } = useAuth();
   const { saveSummary, isLoading: isSaving } = useSummaries();
   const [currentTab, setCurrentTab] = useState('summary');
+  const [isUserPremium, setIsUserPremium] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      checkUserPremiumStatus();
+    }
+  }, [user]);
+
+  const checkUserPremiumStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_premium')
+        .eq('id', user.id)
+        .single();
+        
+      if (error) {
+        console.error('Error checking premium status:', error);
+        return;
+      }
+      
+      setIsUserPremium(!!data.is_premium);
+    } catch (error) {
+      console.error('Error checking premium status:', error);
+    }
+  };
 
   const handleSave = async () => {
     if (!summary) return;
@@ -43,6 +72,16 @@ const SidePanel: React.FC<SidePanelProps> = ({
       return;
     }
     
+    if (!isUserPremium) {
+      toast({
+        title: "Recurso PRO",
+        description: "Salvar resumos está disponível apenas para assinantes do plano PRO por R$9,90/mês.",
+        variant: "destructive",
+      });
+      navigate('/account');
+      return;
+    }
+    
     const result = await saveSummary(pageTitle, url, summary);
     
     if (result) {
@@ -51,6 +90,10 @@ const SidePanel: React.FC<SidePanelProps> = ({
         description: "O resumo foi salvo no seu histórico.",
       });
     }
+  };
+
+  const handleUpgrade = () => {
+    navigate('/account');
   };
 
   // Reset to summary tab when panel opens
@@ -113,13 +156,36 @@ const SidePanel: React.FC<SidePanelProps> = ({
                     ))}
                   </ul>
                   <div className="fixed bottom-0 right-0 p-4 w-96 bg-white dark:bg-extension-dark border-t border-gray-200 dark:border-gray-800">
-                    <Button 
-                      onClick={handleSave} 
-                      className="w-full bg-extension-blue hover:bg-extension-light-blue"
-                      disabled={isSaving}
-                    >
-                      {isSaving ? 'Salvando...' : 'Salvar resumo'}
-                    </Button>
+                    {!isUserPremium && (
+                      <div className="mb-4 p-2 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 text-sm rounded">
+                        <div className="flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-500">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                            <path d="M2 17l10 5 10-5"></path>
+                            <path d="M2 12l10 5 10-5"></path>
+                          </svg>
+                          <span className="font-medium">Plano Gratuito</span>
+                        </div>
+                        <p className="mt-1">Você está limitado a 1 resumo por dia e não pode salvar resumos. Faça upgrade para o plano PRO.</p>
+                      </div>
+                    )}
+                    
+                    {isUserPremium ? (
+                      <Button 
+                        onClick={handleSave} 
+                        className="w-full bg-extension-blue hover:bg-extension-light-blue"
+                        disabled={isSaving}
+                      >
+                        {isSaving ? 'Salvando...' : 'Salvar resumo'}
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={handleUpgrade} 
+                        className="w-full bg-extension-blue hover:bg-extension-light-blue"
+                      >
+                        Upgrade para PRO - R$9,90/mês
+                      </Button>
+                    )}
                   </div>
                 </>
               ) : (
