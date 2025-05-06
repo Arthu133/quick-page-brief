@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import FloatingButton from '@/components/FloatingButton';
 import SidePanel from '@/components/SidePanel';
@@ -7,8 +6,10 @@ import SampleArticle from '@/components/SampleArticle';
 import LoginForm from '@/components/LoginForm';
 import LandingPage from '@/components/LandingPage';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
+  const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const [showLanding, setShowLanding] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
@@ -17,6 +18,25 @@ const Index = () => {
   const [summary, setSummary] = useState<string[] | null>(null);
   const [pageTitle, setPageTitle] = useState('');
   const [pageUrl, setPageUrl] = useState('');
+  
+  const navigateToHome = () => {
+    // Reset to landing page if not visited before, otherwise just reload the demo
+    const hasVisitedBefore = localStorage.getItem('visited');
+    if (hasVisitedBefore === 'true') {
+      setShowLanding(false);
+      setShowLogin(false);
+      setIsOpen(false);
+    } else {
+      setShowLanding(true);
+    }
+    
+    // If we're already on the home route, just refresh the component state
+    if (window.location.pathname === '/') {
+      window.scrollTo(0, 0);
+    } else {
+      navigate('/');
+    }
+  };
   
   const togglePanel = () => {
     if (!isOpen) {
@@ -99,7 +119,10 @@ const Index = () => {
       <div className="min-h-screen flex flex-col">
         <div className="bg-gray-50 dark:bg-gray-900 border-b p-4">
           <div className="container mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-2">
+            <div 
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={navigateToHome}
+            >
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-extension-blue">
                 <path d="M14 3v4a1 1 0 0 0 1 1h4" />
                 <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
@@ -120,7 +143,10 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       <div className="py-4 px-6 bg-white dark:bg-gray-900 border-b">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
+          <div 
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={navigateToHome}
+          >
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-extension-blue">
               <path d="M14 3v4a1 1 0 0 0 1 1h4" />
               <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
@@ -136,14 +162,14 @@ const Index = () => {
               <>
                 <span className="text-sm text-muted-foreground hidden md:inline">Simulação da extensão para navegador</span>
                 <button 
-                  onClick={() => window.location.href = '/dashboard'} 
+                  onClick={() => navigate('/dashboard')} 
                   className="text-extension-blue hover:text-extension-light-blue text-sm"
                 >
                   Meu histórico
                 </button>
                 <div 
                   className="w-8 h-8 rounded-full bg-extension-soft-blue flex items-center justify-center text-extension-blue font-medium cursor-pointer"
-                  onClick={() => window.location.href = '/account'}
+                  onClick={() => navigate('/account')}
                 >
                   {user.email ? user.email.substring(0, 2).toUpperCase() : "?"}
                 </div>
