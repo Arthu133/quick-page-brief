@@ -35,14 +35,47 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function checkLoginStatus() {
-  // This would normally check with your backend
-  // For demo purposes, we'll check local storage
-  const userString = localStorage.getItem('pagebrief_user');
-  if (!userString) return null;
-  
   try {
-    return JSON.parse(userString);
+    // First, try to get user from localStorage directly
+    let userString = localStorage.getItem('supabase.auth.token');
+    
+    if (!userString) {
+      // If not found, try to get it from any key that might contain auth data
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith('supabase.auth.') || key.includes('sb-'))) {
+          userString = localStorage.getItem(key);
+          break;
+        }
+      }
+    }
+    
+    // If still not found, try opening main page in a tab to sync auth state
+    if (!userString) {
+      // Try to check with the main site via chrome.storage
+      chrome.storage.local.get(['pagebrief_user'], (result) => {
+        if (result && result.pagebrief_user) {
+          return JSON.parse(result.pagebrief_user);
+        }
+      });
+      return null;
+    }
+    
+    // Parse user data if found
+    if (userString) {
+      try {
+        const parsedData = JSON.parse(userString);
+        // Save to chrome storage for consistency
+        chrome.storage.local.set({ 'pagebrief_user': userString });
+        return parsedData;
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+    
+    return null;
   } catch (e) {
+    console.error('Error checking login status:', e);
     return null;
   }
 }
