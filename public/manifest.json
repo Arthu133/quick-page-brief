@@ -40,5 +40,11 @@
   "author": "PageBrief Team",
   "homepage_url": "https://pagebrief.web.app/",
   "offline_enabled": true,
-  "short_name": "PageBrief"
+  "short_name": "PageBrief",
+  "web_accessible_resources": [
+    {
+      "resources": ["*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

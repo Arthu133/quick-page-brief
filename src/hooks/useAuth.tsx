@@ -94,6 +94,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: {
+          // Não usar redirectTo para evitar problemas de redirecionamento
+        }
       });
       
       if (error) {
@@ -129,6 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           data: {
             full_name: fullName,
           },
+          // Não usar redirectTo para evitar problemas de redirecionamento
         },
       });
 
@@ -182,8 +186,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "Você saiu da sua conta com sucesso.",
       });
       
-      // Force page reload for a clean state
-      window.location.href = '/';
+      // Ao invés de redirecionar para uma URL específica, voltamos para a página atual
+      // ou para a página inicial da aplicação
+      if (window.location.pathname !== '/') {
+        window.location.href = '/';
+      } else {
+        // Se já estiver na página inicial, apenas force um reload para limpar o estado
+        window.location.reload();
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao sair",
