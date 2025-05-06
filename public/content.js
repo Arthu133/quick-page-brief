@@ -1,3 +1,4 @@
+
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "getSummary") {
@@ -100,7 +101,12 @@ function extractPageContent() {
   // Try different content strategies in order of preference
   const selectors = [
     'article', 'main', '.content', '.post', '.entry', '.article',
-    '#content', '#main', '[role="main"]', '.post-content', '.entry-content'
+    '#content', '#main', '[role="main"]', '.post-content', '.entry-content',
+    // Additional selectors for common content containers
+    '.page-content', '.body-content', '.text-content', '.story-content',
+    '.story-body', '.news-article', '.blog-post', '[itemprop="articleBody"]',
+    '.article-content', '.article-body', '.entry-body', '.single-content',
+    '.wysiwyg', '.rich-text', '.page-body'
   ];
   
   // Try each selector
@@ -142,7 +148,8 @@ function extractPageContent() {
       'header', 'nav', 'footer', '.header', '.nav', '.navbar', '.menu', 
       '.footer', '.sidebar', '.advertisement', '.ad', '.comments', 'aside',
       '[role="navigation"]', '[role="banner"]', '[role="contentinfo"]',
-      '.navigation', '.menu', '.social', '.share', '.related', '.widget'
+      '.navigation', '.menu', '.social', '.share', '.related', '.widget',
+      'script', 'style', 'noscript', 'svg', 'iframe', '.modal', '.popup'
     ];
     
     selectorsToRemove.forEach(selector => {
@@ -152,24 +159,45 @@ function extractPageContent() {
       });
     });
     
-    content = clone.textContent;
+    // Extract text and filter out short lines (like menu items)
+    const textContent = clone.textContent || "";
+    const lines = textContent.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 30) // Only keep substantial lines
+      .join('\n\n');
+    
+    content = lines;
+  }
+  
+  // If content is still insufficient, try iframes (for embedded content)
+  if (content.trim().length < 100) {
+    try {
+      const iframes = document.querySelectorAll('iframe');
+      for (const iframe of iframes) {
+        try {
+          if (iframe.contentDocument && iframe.contentDocument.body) {
+            content += iframe.contentDocument.body.innerText + "\n\n";
+          }
+        } catch (e) {
+          // Cross-origin iframes can't be accessed
+          console.log("Could not access iframe content due to same-origin policy");
+        }
+      }
+    } catch (e) {
+      console.error("Error accessing iframe content", e);
+    }
+  }
+  
+  // Wait for the next frame to capture any delayed rendered content
+  if (content.trim().length < 100) {
+    // We can't use the async version in a content script directly,
+    // but we note this as a potential improvement
+    console.log("Content extraction: first pass insufficient, consider delayed extraction");
   }
   
   console.log(`Extracted content length: ${content.trim().length} characters`);
   return content;
 }
-
-// The getMockSummary function can be removed as we're now using the real OpenAI API
-// function getMockSummary() {
-//   // Mock summary to simulate API response
-//   return [
-//     "A Inteligência Artificial (IA) transformou-se de um conceito teórico para uma tecnologia presente em nosso dia a dia, com aplicações que vão desde assistentes virtuais até diagnósticos médicos.",
-//     "Existem três tipos principais de IA: Estreita (para tarefas específicas), Geral (semelhante à inteligência humana) e Super IA (hipotética e superior aos humanos). Atualmente, toda IA é do tipo estreita.",
-//     "A IA está sendo aplicada em diversos setores como saúde, finanças, transporte, varejo e educação, criando novas oportunidades e soluções para problemas complexos.",
-//     "Desafios significativos incluem questões de privacidade, viés algorítmico, transparência, impacto no mercado de trabalho e determinação de responsabilidade.",
-//     "O futuro da IA envolve avanços em aprendizado profundo, IA explicável, IA federada e abordagens híbridas, com necessidade de regulamentação para garantir benefícios à humanidade."
-//   ];
-// }
 
 // Add the floating button to the page
 function addFloatingButton() {

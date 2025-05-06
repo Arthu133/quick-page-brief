@@ -114,43 +114,79 @@ async function handleSummarize() {
   }
   
   try {
-    // Send message to content script
-    chrome.tabs.sendMessage(tab.id, { action: "getSummary" }, (response) => {
-      if (chrome.runtime.lastError) {
-        // Content script not ready or cannot establish connection
-        showError("Não foi possível conectar com a página. Tente recarregá-la.");
-        return;
-      }
-      
-      if (!response || response.error) {
-        showError(response?.error || "Erro ao gerar resumo.");
-        return;
-      }
-      
-      if (!response.summary || response.summary.length === 0) {
-        loadingElement.classList.add('hidden');
-        noContentElement.classList.remove('hidden');
-        return;
-      }
-      
-      // Display the summary
-      displaySummary(tab.title, response.summary);
-      
-      // Update usage count
-      updateUsageCount();
-      
-      // Show premium message if returned in response
-      if (response.message) {
-        const summaryContainer = document.querySelector('.summary-container');
-        const premiumMessage = document.createElement('div');
-        premiumMessage.className = 'mt-4 p-2 bg-blue-50 text-blue-700 text-sm rounded';
-        premiumMessage.textContent = response.message;
-        summaryContainer.appendChild(premiumMessage);
-      }
+    // Try to extract content with a short delay to allow for dynamic content loading
+    chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      function: injectDelayedExtractor
+    }).then(() => {
+      // Now send message to content script after the delay function was injected
+      setTimeout(() => {
+        chrome.tabs.sendMessage(tab.id, { action: "getSummary" }, (response) => {
+          if (chrome.runtime.lastError) {
+            // Content script not ready or cannot establish connection
+            showError("Não foi possível conectar com a página. Tente recarregá-la.");
+            return;
+          }
+          
+          if (!response || response.error) {
+            showError(response?.error || "Erro ao gerar resumo.");
+            return;
+          }
+          
+          if (!response.summary || response.summary.length === 0) {
+            loadingElement.classList.add('hidden');
+            noContentElement.classList.remove('hidden');
+            return;
+          }
+          
+          // Display the summary
+          displaySummary(tab.title, response.summary);
+          
+          // Update usage count
+          updateUsageCount();
+          
+          // Show premium message if returned in response
+          if (response.message) {
+            const summaryContainer = document.querySelector('.summary-container');
+            const premiumMessage = document.createElement('div');
+            premiumMessage.className = 'mt-4 p-2 bg-blue-50 text-blue-700 text-sm rounded';
+            premiumMessage.textContent = response.message;
+            summaryContainer.appendChild(premiumMessage);
+          }
+        });
+      }, 300); // Short delay to ensure content script has time to process
+    }).catch(err => {
+      console.error("Script injection error:", err);
+      showError("Erro ao analisar a página.");
     });
   } catch (error) {
     console.error("Error in handleSummarize:", error);
     showError("Ocorreu um erro ao tentar resumir a página.");
+  }
+}
+
+// This function will be injected into the page to help with dynamic content extraction
+function injectDelayedExtractor() {
+  // We'll set up a MutationObserver to detect content changes
+  // This is a helper function that will be injected into the page context
+  if (!window._pageBriefObserverInitialized) {
+    window._pageBriefObserverInitialized = true;
+    
+    // Create observer instance
+    const observer = new MutationObserver((mutations) => {
+      // When mutations happen, we'll just set a flag that content was updated
+      window._pageBriefContentUpdated = true;
+    });
+    
+    // Observe the entire document for changes in DOM
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: false,
+      characterData: true
+    });
+    
+    console.log("PageBrief: Content observer initialized");
   }
 }
 
