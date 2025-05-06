@@ -167,7 +167,7 @@ function updateUsageCount() {
 
 function openLogin() {
   // Open login page in a new tab
-  chrome.tabs.create({ url: 'https://pagebrief.web.app/login' });
+  chrome.tabs.create({ url: 'https://quick-page-brief.lovable.app' });
 }
 
 function openOptions() {
