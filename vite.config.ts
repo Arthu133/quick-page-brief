@@ -25,6 +25,14 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, "index.html"),
+        popup: path.resolve(__dirname, "public/popup.html"),
+        options: path.resolve(__dirname, "public/options.html"),
+      },
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+        }
       }
     }
   }

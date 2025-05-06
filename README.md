@@ -1,3 +1,4 @@
+
 # Welcome to your Lovable project
 
 ## Project info
@@ -34,6 +35,18 @@ npm i
 
 # Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
+```
+
+**To build the Chrome extension:**
+
+```sh
+# Ensure you have all dependencies
+npm i
+
+# Build the project using npx to access local node modules
+npx vite build
+
+# The extension will be available in the dist folder
 ```
 
 **Edit a file directly in GitHub**

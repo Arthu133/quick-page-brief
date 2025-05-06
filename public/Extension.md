@@ -8,7 +8,8 @@ Para usar esta aplicação como uma extensão do Chrome, siga os passos abaixo:
 Execute o comando de build para criar os arquivos da extensão:
 
 ```bash
-npm run build
+# Usando npx para acessar os módulos locais do node
+npx vite build
 ```
 
 ## 2. Carregue a extensão no Chrome
