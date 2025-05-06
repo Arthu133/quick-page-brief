@@ -66,35 +66,38 @@ async function updateSummaryCount(
 ): Promise<void> {
   const today = new Date().toISOString().split('T')[0];
   
-  // Check if there's an entry for today
-  const { data, error } = await supabase
-    .from('daily_summary_count')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('summary_date', today)
-    .maybeSingle();
-  
-  if (error) {
-    console.error('Error checking summary count:', error);
-    return;
-  }
-  
-  if (data) {
-    // Update existing entry
-    await supabase
+  try {
+    // Check if there's an entry for today
+    const { data, error } = await supabase
       .from('daily_summary_count')
-      .update({ summary_count: data.summary_count + 1 })
+      .select('*')
       .eq('user_id', userId)
-      .eq('summary_date', today);
-  } else {
-    // Create new entry
-    await supabase
-      .from('daily_summary_count')
-      .insert({
-        user_id: userId,
-        summary_date: today,
-        summary_count: 1
-      });
+      .eq('summary_date', today)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('Error checking summary count:', error);
+      return;
+    }
+    
+    if (data) {
+      // Update existing entry
+      await supabase
+        .from('daily_summary_count')
+        .update({ summary_count: data.summary_count + 1 })
+        .eq('id', data.id);
+    } else {
+      // Create new entry
+      await supabase
+        .from('daily_summary_count')
+        .insert({
+          user_id: userId,
+          summary_date: today,
+          summary_count: 1
+        });
+    }
+  } catch (error) {
+    console.error('Error updating summary count:', error);
   }
 }
 

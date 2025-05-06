@@ -15,6 +15,13 @@ interface UserProfile {
   created_at: string;
 }
 
+interface DailySummaryCount {
+  id: string;
+  user_id: string;
+  summary_count: number;
+  summary_date: string;
+}
+
 const Account = () => {
   const { user, signOut, isLoading: authLoading } = useAuth();
   const { checkCanCreateSummary } = useSummaries();

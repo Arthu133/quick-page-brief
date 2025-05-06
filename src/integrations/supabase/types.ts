@@ -9,6 +9,27 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      daily_summary_count: {
+        Row: {
+          id: string
+          summary_count: number
+          summary_date: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          summary_count?: number
+          summary_date?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          summary_count?: number
+          summary_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -62,14 +83,7 @@ export type Database = {
       }
     }
     Views: {
-      daily_summary_count: {
-        Row: {
-          summary_count: number | null
-          summary_date: string | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       can_create_summary: {
