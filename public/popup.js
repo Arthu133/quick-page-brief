@@ -113,31 +113,36 @@ async function handleSummarize() {
     return;
   }
   
-  // Send message to content script
-  chrome.tabs.sendMessage(tab.id, { action: "getSummary" }, (response) => {
-    if (chrome.runtime.lastError) {
-      // Content script not ready or cannot establish connection
-      showError("Não foi possível conectar com a página. Tente recarregá-la.");
-      return;
-    }
-    
-    if (!response || response.error) {
-      showError(response?.error || "Erro ao gerar resumo.");
-      return;
-    }
-    
-    if (!response.summary || response.summary.length === 0) {
-      loadingElement.classList.add('hidden');
-      noContentElement.classList.remove('hidden');
-      return;
-    }
-    
-    // Display the summary
-    displaySummary(tab.title, response.summary);
-    
-    // Update usage count
-    updateUsageCount();
-  });
+  try {
+    // Send message to content script
+    chrome.tabs.sendMessage(tab.id, { action: "getSummary" }, (response) => {
+      if (chrome.runtime.lastError) {
+        // Content script not ready or cannot establish connection
+        showError("Não foi possível conectar com a página. Tente recarregá-la.");
+        return;
+      }
+      
+      if (!response || response.error) {
+        showError(response?.error || "Erro ao gerar resumo.");
+        return;
+      }
+      
+      if (!response.summary || response.summary.length === 0) {
+        loadingElement.classList.add('hidden');
+        noContentElement.classList.remove('hidden');
+        return;
+      }
+      
+      // Display the summary
+      displaySummary(tab.title, response.summary);
+      
+      // Update usage count
+      updateUsageCount();
+    });
+  } catch (error) {
+    console.error("Error in handleSummarize:", error);
+    showError("Ocorreu um erro ao tentar resumir a página.");
+  }
 }
 
 function displaySummary(pageTitle, summaryPoints) {

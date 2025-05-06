@@ -5,7 +5,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Extract content from the current page
     const content = extractPageContent();
     
-    if (!content || content.length < 100) {
+    if (!content || content.trim().length < 100) {
       sendResponse({ 
         error: "Conteúdo insuficiente para gerar resumo." 
       });
@@ -25,39 +25,69 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 function extractPageContent() {
-  // Simple content extraction
-  // A real implementation would be more sophisticated
-  const article = document.querySelector('article');
+  // Enhanced content extraction function
+  let content = "";
   
-  if (article) {
-    return article.innerText;
-  }
-  
-  // Try to get main content area
-  const main = document.querySelector('main');
-  if (main) {
-    return main.innerText;
-  }
-  
-  // Fallback to body text, excluding common navigation elements
-  const body = document.body;
-  
-  // Create a clone to manipulate
-  const clone = body.cloneNode(true);
-  
-  // Remove common non-content elements
-  const selectorsToRemove = [
-    'header', 'nav', 'footer', '.header', '.nav', '.navbar', '.menu', 
-    '.footer', '.sidebar', '.advertisement', '.ad', '.comments',
-    '[role="navigation"]', '[role="banner"]', '[role="contentinfo"]'
+  // Try different content strategies in order of preference
+  const selectors = [
+    'article', 'main', '.content', '.post', '.entry', '.article',
+    '#content', '#main', '[role="main"]', '.post-content', '.entry-content'
   ];
   
-  selectorsToRemove.forEach(selector => {
-    const elements = clone.querySelectorAll(selector);
-    elements.forEach(el => el.remove());
-  });
+  // Try each selector
+  for (const selector of selectors) {
+    const elements = document.querySelectorAll(selector);
+    if (elements.length > 0) {
+      // Concatenate text from all matching elements
+      for (const element of elements) {
+        content += element.innerText + "\n\n";
+      }
+      
+      if (content.trim().length > 100) {
+        console.log(`Found content using selector: ${selector}`);
+        return content;
+      }
+    }
+  }
   
-  return clone.innerText;
+  // If no content found with selectors, get all paragraphs
+  if (content.trim().length < 100) {
+    const paragraphs = document.querySelectorAll('p');
+    if (paragraphs.length > 3) {
+      for (const p of paragraphs) {
+        // Skip very short paragraphs that might be buttons or labels
+        if (p.innerText.trim().length > 20) {
+          content += p.innerText + "\n\n";
+        }
+      }
+    }
+  }
+  
+  // If still no content, try getting text directly from body
+  if (content.trim().length < 100) {
+    // Create a clone to manipulate
+    const clone = document.body.cloneNode(true);
+    
+    // Remove common non-content elements
+    const selectorsToRemove = [
+      'header', 'nav', 'footer', '.header', '.nav', '.navbar', '.menu', 
+      '.footer', '.sidebar', '.advertisement', '.ad', '.comments', 'aside',
+      '[role="navigation"]', '[role="banner"]', '[role="contentinfo"]',
+      '.navigation', '.menu', '.social', '.share', '.related', '.widget'
+    ];
+    
+    selectorsToRemove.forEach(selector => {
+      const elements = clone.querySelectorAll(selector);
+      elements.forEach(el => {
+        try { el.remove(); } catch (e) { /* ignore errors */ }
+      });
+    });
+    
+    content = clone.textContent;
+  }
+  
+  console.log(`Extracted content length: ${content.trim().length} characters`);
+  return content;
 }
 
 function getMockSummary() {
