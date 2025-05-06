@@ -138,6 +138,15 @@ async function handleSummarize() {
       
       // Update usage count
       updateUsageCount();
+      
+      // Show premium message if returned in response
+      if (response.message) {
+        const summaryContainer = document.querySelector('.summary-container');
+        const premiumMessage = document.createElement('div');
+        premiumMessage.className = 'mt-4 p-2 bg-blue-50 text-blue-700 text-sm rounded';
+        premiumMessage.textContent = response.message;
+        summaryContainer.appendChild(premiumMessage);
+      }
     });
   } catch (error) {
     console.error("Error in handleSummarize:", error);

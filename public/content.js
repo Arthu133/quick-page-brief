@@ -1,9 +1,10 @@
-
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "getSummary") {
     // Extract content from the current page
     const content = extractPageContent();
+    const pageUrl = window.location.href;
+    const pageTitle = document.title;
     
     if (!content || content.trim().length < 100) {
       sendResponse({ 
@@ -12,17 +13,85 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
     }
     
-    // In a real extension, you would send this to your API
-    // For demo purposes, we'll return mock data
-    setTimeout(() => {
-      sendResponse({
-        summary: getMockSummary()
+    // Send the content to our Supabase function to get a summary
+    sendToSummaryAPI(content, pageUrl, pageTitle)
+      .then(summary => {
+        sendResponse(summary);
+      })
+      .catch(error => {
+        console.error("Error getting summary:", error);
+        sendResponse({
+          error: "Erro ao gerar resumo. Tente novamente mais tarde."
+        });
       });
-    }, 1500); // Simulate API call delay
     
     return true; // Keeps the message channel open for the async response
   }
 });
+
+async function sendToSummaryAPI(content, url, title) {
+  try {
+    // Prepare user auth data if available
+    let authData = null;
+    try {
+      // Try to get auth token from localStorage
+      let userString = localStorage.getItem('supabase.auth.token');
+      
+      if (!userString) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('supabase.auth.') || key.includes('sb-'))) {
+            userString = localStorage.getItem(key);
+            break;
+          }
+        }
+      }
+      
+      if (userString) {
+        const parsedData = JSON.parse(userString);
+        if (parsedData.access_token || (parsedData.session && parsedData.session.access_token)) {
+          authData = {
+            access_token: parsedData.access_token || parsedData.session.access_token
+          };
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing auth data:", e);
+    }
+    
+    // Call the summary API
+    const response = await fetch("https://wguqcjcpahisfcjqalhu.supabase.co/functions/v1/summarize", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // The anon key is public and safe to use in client-side code
+        "apikey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndndXFjamNwYWhpc2ZjanFhbGh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY1NTc1NzgsImV4cCI6MjA2MjEzMzU3OH0.sQ2beZHSbX_eBKrG6doEq5owJagFH3TaWqxeM1SEobo"
+      },
+      body: JSON.stringify({
+        content,
+        url,
+        title,
+        auth: authData
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("API error:", errorData);
+      return { 
+        error: errorData.message || "Erro ao gerar resumo." 
+      };
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error in sendToSummaryAPI:", error);
+    return { 
+      error: "Erro ao conectar com o serviço de resumo." 
+    };
+  }
+}
 
 function extractPageContent() {
   // Enhanced content extraction function
@@ -90,16 +159,17 @@ function extractPageContent() {
   return content;
 }
 
-function getMockSummary() {
-  // Mock summary to simulate API response
-  return [
-    "A Inteligência Artificial (IA) transformou-se de um conceito teórico para uma tecnologia presente em nosso dia a dia, com aplicações que vão desde assistentes virtuais até diagnósticos médicos.",
-    "Existem três tipos principais de IA: Estreita (para tarefas específicas), Geral (semelhante à inteligência humana) e Super IA (hipotética e superior aos humanos). Atualmente, toda IA é do tipo estreita.",
-    "A IA está sendo aplicada em diversos setores como saúde, finanças, transporte, varejo e educação, criando novas oportunidades e soluções para problemas complexos.",
-    "Desafios significativos incluem questões de privacidade, viés algorítmico, transparência, impacto no mercado de trabalho e determinação de responsabilidade.",
-    "O futuro da IA envolve avanços em aprendizado profundo, IA explicável, IA federada e abordagens híbridas, com necessidade de regulamentação para garantir benefícios à humanidade."
-  ];
-}
+// The getMockSummary function can be removed as we're now using the real OpenAI API
+// function getMockSummary() {
+//   // Mock summary to simulate API response
+//   return [
+//     "A Inteligência Artificial (IA) transformou-se de um conceito teórico para uma tecnologia presente em nosso dia a dia, com aplicações que vão desde assistentes virtuais até diagnósticos médicos.",
+//     "Existem três tipos principais de IA: Estreita (para tarefas específicas), Geral (semelhante à inteligência humana) e Super IA (hipotética e superior aos humanos). Atualmente, toda IA é do tipo estreita.",
+//     "A IA está sendo aplicada em diversos setores como saúde, finanças, transporte, varejo e educação, criando novas oportunidades e soluções para problemas complexos.",
+//     "Desafios significativos incluem questões de privacidade, viés algorítmico, transparência, impacto no mercado de trabalho e determinação de responsabilidade.",
+//     "O futuro da IA envolve avanços em aprendizado profundo, IA explicável, IA federada e abordagens híbridas, com necessidade de regulamentação para garantir benefícios à humanidade."
+//   ];
+// }
 
 // Add the floating button to the page
 function addFloatingButton() {

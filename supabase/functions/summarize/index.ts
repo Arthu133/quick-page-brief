@@ -1,4 +1,5 @@
-/// <reference lib="deno.ns" />
+
+// deno-lint-ignore-file no-explicit-any
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
@@ -9,12 +10,73 @@ const corsHeaders = {
   'Content-Type': 'application/json',
 };
 
-// Mock function to generate summaries
-function generateSummary(content: string, url: string): string[] {
-  // In a real implementation, this would call OpenAI or another AI service
-  console.log(`Generating summary for URL: ${url}`);
-  console.log(`Content length: ${content.length} characters`);
-  
+// Function to generate summaries using OpenAI
+async function generateSummaryWithOpenAI(content: string, url: string): Promise<string[]> {
+  try {
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    
+    if (!openAIApiKey) {
+      console.error('OpenAI API key not configured');
+      return mockSummary(content);
+    }
+    
+    console.log(`Generating real summary for URL: ${url}`);
+    console.log(`Content length: ${content.length} characters`);
+    
+    // Truncate content if it's too long (OpenAI has token limits)
+    const maxLength = 15000; // Safety limit, adjust based on token count
+    const truncatedContent = content.length > maxLength ? 
+      content.substring(0, maxLength) + "... [content truncated due to length]" : 
+      content;
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an assistant that summarizes webpage content into clear bullet points in Portuguese. Extract the key points and provide a concise summary organized as separate bullet points. Do not include introductory text or conclusions, just the bullet points themselves.'
+          },
+          {
+            role: 'user',
+            content: `Summarize the following content into 5-7 bullet points:\n\n${truncatedContent}`
+          }
+        ],
+        temperature: 0.5,
+        max_tokens: 1000,
+      }),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('OpenAI API error:', error);
+      return mockSummary(content);
+    }
+    
+    const result = await response.json();
+    const summaryText = result.choices[0].message.content;
+    
+    // Process the summary text into an array of bullet points
+    // Remove any markdown bullet point symbols and split by newlines
+    const bulletPoints = summaryText
+      .split('\n')
+      .map(line => line.trim().replace(/^[-•*]\s*/, '')) // Remove bullet point markers
+      .filter(line => line.length > 0); // Remove empty lines
+    
+    return bulletPoints;
+  } catch (error) {
+    console.error('Error generating summary with OpenAI:', error);
+    return mockSummary(content);
+  }
+}
+
+// Fallback mock function for backup
+function mockSummary(content: string): string[] {
   // For now, return a mock summary based on content length
   if (content.includes('inteligência artificial') || content.includes('AI')) {
     return [
@@ -220,8 +282,8 @@ serve(async (req) => {
       }
     }
     
-    // Generate summary
-    const summary = generateSummary(content, url);
+    // Generate summary with OpenAI
+    const summary = await generateSummaryWithOpenAI(content, url);
     
     // Save summary if authenticated and premium
     let saved = false;
