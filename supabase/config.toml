@@ -2,3 +2,7 @@
 project_id = "wguqcjcpahisfcjqalhu"
 
 [functions.summarize]
+
+[functions.create-checkout]
+
+[functions.verify-subscription]

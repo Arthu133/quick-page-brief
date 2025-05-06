@@ -1,11 +1,12 @@
 
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useSummaries } from '@/hooks/useSummaries';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface UserProfile {
   id: string;
@@ -19,8 +20,30 @@ const Account = () => {
   const { checkCanCreateSummary } = useSummaries();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [dailySummaryCount, setDailySummaryCount] = useState(0);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+  
+  const paymentSuccess = searchParams.get('success') === 'true';
+  const paymentCanceled = searchParams.get('canceled') === 'true';
+
+  useEffect(() => {
+    if (paymentSuccess) {
+      toast({
+        title: "Pagamento realizado com sucesso!",
+        description: "Bem-vindo ao plano PRO! Agora você tem acesso a resumos ilimitados.",
+      });
+      verifySubscription();
+    } else if (paymentCanceled) {
+      toast({
+        title: "Pagamento cancelado",
+        description: "O processo de pagamento foi cancelado.",
+        variant: "destructive",
+      });
+    }
+  }, [paymentSuccess, paymentCanceled]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -59,6 +82,69 @@ const Account = () => {
       console.error('Error fetching profile:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const verifySubscription = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('verify-subscription');
+      
+      if (error) {
+        console.error('Error verifying subscription:', error);
+        return;
+      }
+      
+      if (data.isPremium) {
+        await fetchProfile(); // Refresh profile data to get updated premium status
+      }
+    } catch (error) {
+      console.error('Error verifying subscription:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpgrade = async () => {
+    if (!user) {
+      toast({
+        title: "Não autenticado",
+        description: "Você precisa estar conectado para fazer upgrade.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      setIsProcessingPayment(true);
+      
+      const { data, error } = await supabase.functions.invoke('create-checkout');
+      
+      if (error) {
+        console.error('Error creating checkout session:', error);
+        toast({
+          title: "Erro ao processar pagamento",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (data?.url) {
+        window.location.href = data.url;
+      }
+    } catch (error: any) {
+      console.error('Error creating checkout session:', error);
+      toast({
+        title: "Erro ao processar pagamento",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -218,8 +304,12 @@ const Account = () => {
                 </li>
               </ul>
               
-              <Button className="w-full bg-extension-blue hover:bg-extension-light-blue">
-                Upgrade para PRO
+              <Button 
+                className="w-full bg-extension-blue hover:bg-extension-light-blue"
+                onClick={handleUpgrade}
+                disabled={isProcessingPayment}
+              >
+                {isProcessingPayment ? 'Processando...' : 'Upgrade para PRO'}
               </Button>
             </div>
           )}
