@@ -9,13 +9,73 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string | null
+          full_name: string | null
+          id: string
+          is_premium: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          full_name?: string | null
+          id: string
+          is_premium?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          is_premium?: boolean | null
+        }
+        Relationships: []
+      }
+      summaries: {
+        Row: {
+          created_at: string | null
+          id: string
+          page_title: string | null
+          page_url: string
+          summary: string
+          user_id: string
+          user_notes: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          page_title?: string | null
+          page_url: string
+          summary: string
+          user_id: string
+          user_notes?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          page_title?: string | null
+          page_url?: string
+          summary?: string
+          user_id?: string
+          user_notes?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      daily_summary_count: {
+        Row: {
+          summary_count: number | null
+          summary_date: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      can_create_summary: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

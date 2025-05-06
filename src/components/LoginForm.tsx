@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface LoginFormProps {
   onComplete: () => void;
@@ -12,36 +14,58 @@ interface LoginFormProps {
 
 const LoginForm: React.FC<LoginFormProps> = ({ onComplete }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const { signIn, signUp } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Simulando o processo de login
-    setTimeout(() => {
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (!error) {
+        onComplete();
+      }
+    } finally {
       setIsLoading(false);
-      onComplete();
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Bem-vindo ao PageBrief.",
-      });
-    }, 1500);
+    }
   };
   
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!name || name.trim() === '') {
+      toast({
+        title: "Nome obrigatório",
+        description: "Por favor, informe seu nome.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
-    // Simulando o processo de registro
-    setTimeout(() => {
+    try {
+      const { error } = await signUp(email, password, name);
+      
+      if (!error) {
+        // In a real production app, we might want to show a verification message
+        // but for now, let's consider the user logged in immediately
+        onComplete();
+        
+        toast({
+          title: "Conta criada com sucesso!",
+          description: "Bem-vindo ao PageBrief.",
+        });
+      }
+    } finally {
       setIsLoading(false);
-      onComplete();
-      toast({
-        title: "Conta criada com sucesso!",
-        description: "Bem-vindo ao PageBrief.",
-      });
-    }, 1500);
+    }
   };
   
   return (
@@ -62,7 +86,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ onComplete }) => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" placeholder="seu@email.com" required type="email" />
+                <Input 
+                  id="email" 
+                  placeholder="seu@email.com" 
+                  required 
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
               
               <div className="space-y-2">
@@ -72,10 +103,20 @@ const LoginForm: React.FC<LoginFormProps> = ({ onComplete }) => {
                     Esqueceu a senha?
                   </Button>
                 </div>
-                <Input id="password" required type="password" />
+                <Input 
+                  id="password" 
+                  required 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
               
-              <Button type="submit" className="w-full bg-extension-blue hover:bg-extension-light-blue" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                className="w-full bg-extension-blue hover:bg-extension-light-blue" 
+                disabled={isLoading}
+              >
                 {isLoading ? "Entrando..." : "Entrar"}
               </Button>
               
@@ -113,20 +154,43 @@ const LoginForm: React.FC<LoginFormProps> = ({ onComplete }) => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Nome</Label>
-                <Input id="name" placeholder="Seu nome" required />
+                <Input 
+                  id="name" 
+                  placeholder="Seu nome" 
+                  required 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="register-email">Email</Label>
-                <Input id="register-email" placeholder="seu@email.com" required type="email" />
+                <Input 
+                  id="register-email" 
+                  placeholder="seu@email.com" 
+                  required 
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="register-password">Senha</Label>
-                <Input id="register-password" required type="password" />
+                <Input 
+                  id="register-password" 
+                  required 
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
               
-              <Button type="submit" className="w-full bg-extension-blue hover:bg-extension-light-blue" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                className="w-full bg-extension-blue hover:bg-extension-light-blue" 
+                disabled={isLoading}
+              >
                 {isLoading ? "Criando conta..." : "Criar conta"}
               </Button>
               

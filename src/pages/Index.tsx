@@ -6,9 +6,10 @@ import MockBrowser from '@/components/MockBrowser';
 import SampleArticle from '@/components/SampleArticle';
 import LoginForm from '@/components/LoginForm';
 import LandingPage from '@/components/LandingPage';
+import { useAuth } from '@/hooks/useAuth';
 
 const Index = () => {
-  const [isAuth, setIsAuth] = useState(false);
+  const { user, isLoading: authLoading } = useAuth();
   const [showLanding, setShowLanding] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -19,7 +20,7 @@ const Index = () => {
   
   const togglePanel = () => {
     if (!isOpen) {
-      if (!isAuth) {
+      if (!user && !authLoading && !showLogin) {
         setShowLogin(true);
       } else {
         handleSummarize();
@@ -49,11 +50,16 @@ const Index = () => {
   
   const handleOnGetStarted = () => {
     setShowLanding(false);
-    setShowLogin(true);
+    
+    // If user is already logged in, don't show login form
+    if (user) {
+      setShowLogin(false);
+    } else {
+      setShowLogin(true);
+    }
   };
   
   const handleLoginComplete = () => {
-    setIsAuth(true);
     setShowLogin(false);
   };
   
@@ -61,6 +67,28 @@ const Index = () => {
     setPageTitle(title);
     setPageUrl(url);
   };
+  
+  // Check if we should show the landing page or go straight to the demo
+  useEffect(() => {
+    const hasVisitedBefore = localStorage.getItem('visited');
+    if (hasVisitedBefore === 'true') {
+      setShowLanding(false);
+    }
+  }, []);
+  
+  // Save that user has visited before
+  useEffect(() => {
+    if (!showLanding) {
+      localStorage.setItem('visited', 'true');
+    }
+  }, [showLanding]);
+  
+  // Skip login if user is already authenticated
+  useEffect(() => {
+    if (user && showLogin) {
+      setShowLogin(false);
+    }
+  }, [user, showLogin]);
   
   if (showLanding) {
     return <LandingPage onGetStarted={handleOnGetStarted} />;
@@ -103,11 +131,31 @@ const Index = () => {
             <span className="font-bold">PageBrief Demo</span>
           </div>
           
-          <div className="flex gap-2 items-center">
-            <span className="text-sm text-muted-foreground hidden md:inline">Simulação da extensão para navegador</span>
-            <div className="w-8 h-8 rounded-full bg-extension-soft-blue flex items-center justify-center text-extension-blue font-medium">
-              MS
-            </div>
+          <div className="flex gap-4 items-center">
+            {user ? (
+              <>
+                <span className="text-sm text-muted-foreground hidden md:inline">Simulação da extensão para navegador</span>
+                <button 
+                  onClick={() => window.location.href = '/dashboard'} 
+                  className="text-extension-blue hover:text-extension-light-blue text-sm"
+                >
+                  Meu histórico
+                </button>
+                <div 
+                  className="w-8 h-8 rounded-full bg-extension-soft-blue flex items-center justify-center text-extension-blue font-medium cursor-pointer"
+                  onClick={() => window.location.href = '/account'}
+                >
+                  {user.email ? user.email.substring(0, 2).toUpperCase() : "?"}
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="text-sm text-muted-foreground hidden md:inline">Simulação da extensão para navegador</span>
+                <button onClick={() => setShowLogin(true)} className="text-extension-blue hover:text-extension-light-blue text-sm">
+                  Entrar
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
