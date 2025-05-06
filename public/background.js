@@ -11,7 +11,7 @@ chrome.runtime.onInstalled.addListener(({ reason }) => {
     });
     
     // Open onboarding page
-    chrome.tabs.create({ url: 'https://pagebrief.web.app/welcome' });
+    chrome.tabs.create({ url: 'https://quick-page-brief.lovable.app/welcome' });
   }
 });
 

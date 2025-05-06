@@ -38,7 +38,7 @@ Prepare de 3 a 5 screenshots da sua extensão em uso, com resolução de 1280x80
 - **Descrição detalhada**: PageBrief transforma qualquer conteúdo em resumos concisos. Com um simples clique, obtenha os pontos principais de artigos, blogs e páginas web sem perder tempo lendo todo o conteúdo. Ideal para pesquisas, estudos e manter-se informado em menos tempo.
 - **Idiomas**: Português (Brasil)
 - **Categoria**: Produtividade
-- **Site da extensão**: (opcional)
+- **Site da extensão**: https://quick-page-brief.lovable.app
 
 ### Recursos gráficos
 - Carregue os ícones e screenshots preparados anteriormente
